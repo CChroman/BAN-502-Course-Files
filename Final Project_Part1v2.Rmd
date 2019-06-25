@@ -1,0 +1,107 @@
+---
+title: 'Final Project: Part 1'
+author: "Cynthia Nickerson"
+date: "June 19, 2019"
+output: word_document
+---
+
+```{r}
+library(tidyverse)
+library(mice)
+library(VIM)
+library(ranger)
+library(caret)
+library(rpart)
+library(rattle)
+library(RColorBrewer)
+library(rpart)
+library(GGally)
+library(ggcorrplot)
+```
+
+```{r}
+rain <- read_csv("rain.csv")
+View(rain)
+```
+
+```{r}
+str(rain)
+```
+
+We are starting with 28,003 observations and 20 variables. There are several areas with missing data. See below.
+
+```{r}
+summary(rain)
+```
+
+```{r}
+vim_plot = aggr(rain, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+```
+
+I'm going to delete the rows with NA rather than try to impute the character records. 
+```{r}
+rainv2 <- rain %>%
+  drop_na()
+```
+
+Now we have 13,887 observations with 20 variables.  
+
+```{r}
+vim_plot = aggr(rainv2, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+```
+
+Let's look at the relationship between the variables.  
+```{r}
+ggcorr(rainv2,lable = TRUE)
+```
+
+It is not unsurprising that there is a relationship between the 9am and 3pm temperatures and the max temperature.  IT's also unsurprising that there is a relatioship between windspeed, humidity, and pressure as the day passes. I'd like to focus on the relationship between Rainfall (since we are trying to predict rain) and Humidity.  
+
+9am
+```{r}
+ggplot(rainv2,aes(x=Rainfall, y = Humidity9am)) + geom_point()
+```
+
+At 3pm
+```{r}
+ggplot(rainv2,aes(x=Rainfall, y = Humidity3pm)) + geom_point()
+```
+
+We can roughly see that the higher humidity, the better the chances are of rainfall.  At first glance this appears more so in the 9am data.
+
+I'm going to convert some of these fields to factors before moving forward. 
+
+```{r}
+rainv3 <- rainv2 %>%
+  mutate(RainToday = as.factor(RainToday))%>%
+  mutate(RainToday =fct_recode(RainToday, "No"="0", "Yes"="1")) %>%
+  mutate(RainTomorrow =as.factor(RainTomorrow))%>%
+  mutate(RainTomorrow =fct_recode(RainTomorrow, "No"="0", "Yes"="1")) %>%
+  mutate(MinTemp = as.factor(MinTemp)) %>%
+  mutate(MaxTemp = as.factor(MaxTemp)) %>%
+  mutate(Rainfall = as.factor(Rainfall)) %>%
+  mutate(WindGustSpeed = as.factor(WindGustSpeed)) %>%
+  mutate(WindSpeed9am = as.factor(WindSpeed9am)) %>%
+  mutate(WindSpeed3pm = as.factor(WindSpeed3pm)) %>%
+  mutate(Humidity9am = as.factor(Humidity9am)) %>%
+  mutate(Humidity3pm = as.factor(Humidity3pm)) %>%
+  mutate(Pressure9am = as.factor(Pressure9am)) %>%
+  mutate(Pressure3pm = as.factor(Pressure3pm)) %>%
+  mutate(Cloud9am = as.factor(Cloud9am)) %>%
+  mutate(Cloud3pm = as.factor(Cloud3pm)) %>%
+  mutate(Temp9am = as.factor(Temp9am)) %>%
+  mutate(Temp3pm = as.factor(Temp3pm))
+
+
+```
+
+```{r}
+ggplot(rainv3, aes(x=RainTomorrow, fill = RainToday))+ geom_bar()+theme_bw()
+```
+
+```{r}
+t1 <- table(rainv3$RainTomorrow, rainv3$RainToday)
+prop.table(t1, margin =2)
+```
+
+While RainToday is a predictor of RainTomorrow, I found the relationship with rainfall and humidity more curious. .  
